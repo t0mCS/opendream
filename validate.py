@@ -31,22 +31,3 @@ def validate(datasets, moondream_ft):
 
     print(f"\n\nAccuracy: {correct / len(datasets['test']) * 100:.2f}%")
 
-
-def inference(image):
-    # Load the fine-tuned Moondream checkpoint
-    moondream_ft = AutoModelForCausalLM.from_pretrained(
-        "checkpoints/moondream-ft",
-        trust_remote_code=True,
-        torch_dtype=DTYPE,
-        device_map={"": DEVICE}
-    )
-
-    moondream_ft.eval()
-
-    md_answer = moondream_ft.answer_question(
-        moondream_ft.encode_image(image),
-        "What does the text say?",
-        tokenizer=tokenizer,
-    )
-
-    return md_answer
