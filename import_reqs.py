@@ -46,3 +46,4 @@ MD_REVISION = "2024-03-13"
 
 tokenizer = AutoTokenizer.from_pretrained("vikhyatk/moondream2", revision=MD_REVISION)
 
+
