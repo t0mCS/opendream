@@ -4,16 +4,16 @@ def inference(image):
     # Load the fine-tuned Moondream checkpoint
     print("loading model...")
     moondream = AutoModelForCausalLM.from_pretrained(
-        "checkpoints/moondream-ft", revision=MD_REVISION, trust_remote_code=True,
-        torch_dtype=DTYPE, device_map={"": DEVICE}
+        "checkpoints/moondream-ft"
     )
 
+    #moondream.from_pretrained("checkpoints/moondream-ft")
+#)
     print("model loaded!")
-    # moondream.from_pretrained("checkpoints/moondream-ft")
 
     moondream.eval()
 
-    nu_tokenizer = AutoTokenizer.from_pretrained("tokenizer/moondream-ft", revision=MD_REVISION)
+    nu_tokenizer = AutoTokenizer.from_pretrained("tokenizer/moondream-ft")
 
     print(image)
     print(image.encode_image)
