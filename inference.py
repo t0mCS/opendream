@@ -20,4 +20,4 @@ def inference(image):
     return md_answer
 
 
-inference(Image.open("captcha.png"))
+inference(Image.open("image_60.jpg"))
