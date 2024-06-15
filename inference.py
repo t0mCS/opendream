@@ -13,7 +13,7 @@ def inference(image):
 
     md_answer = moondream.answer_question(
         moondream.encode_image(image),
-        "What does the text say?",
+        "Describe the image",
         tokenizer=tokenizer,
     )
 
