@@ -11,7 +11,7 @@ def inference(image):
 
     moondream.eval()
 
-    nu_tokenizer = AutoTokenizer.from_pretrained("checkpoints/moondream-ft", revision=MD_REVISION)
+    nu_tokenizer = AutoTokenizer.from_pretrained("vikhyatk/moondream2", revision=MD_REVISION)
 
 
     md_answer = moondream.answer_question(
@@ -23,4 +23,4 @@ def inference(image):
     print('Moondream:', md_answer)
 
 
-inference(Image.open("downloaded_images/image_60.jpg"))
+inference(Image.open("downloaded_images/image_50.jpg"))
