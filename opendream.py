@@ -1,239 +1,96 @@
-from torch.utils.data import Dataset
-from datasets import load_dataset
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
-from torch.utils.data import DataLoader
-from bitsandbytes.optim import Adam8bit
-import math
-from einops import rearrange
-from tqdm import tqdm
+from import_reqs import *
+from finetune import fine_tune
+from validate import validate
+# Create a directory to store the downloaded images
+os.makedirs('downloaded_images', exist_ok=True)
 
-class CaptchaDataset(Dataset):
-    def __init__(self, split='train'):
-        self.data = load_dataset(
-            "project-sloth/captcha-images",
-            revision="refs/convert/parquet",
-        )[split]
+# Prompt the user for the search query
+query = input("Enter your search query: ")
+num_images = 20
+num_pages = 3  # Number of pages to scroll through
+
+# Send a GET request to the Google image search URL
+url = f"https://www.google.com/search?q={query}&tbm=isch"
+
+for page in range(num_pages):
+    # Modify the URL to include the page number
+    url_with_page = url + f"&start={page * 20}"
+    response = requests.get(url_with_page)
+
+    # Parse the HTML content using BeautifulSoup
+    soup = BeautifulSoup(response.content, 'html.parser')
+
+    # Find the image elements in the search results
+    image_elements = soup.find_all('img')
+
+    # Download the images from the current page
+    for i, image_element in enumerate(image_elements[:num_images], start=1):
+        # Get the image source URL
+        image_url = image_element['src']
+
+        # Check if the image URL is a relative path
+        if not image_url.startswith('http'):
+            # Construct the complete URL by joining the base URL and the relative path
+            image_url = urljoin(url, image_url)
+
+        # Send a GET request to the image URL
+        image_response = requests.get(image_url)
+
+        # Save the image to the downloaded_images directory
+        with open(f"downloaded_images/image_{page * num_images + i}.jpg", 'wb') as file:
+            file.write(image_response.content)
+
+print("Images downloaded successfully.")
+
+# write a generalDataset class that given [image, solution] creates a dataset
+class GeneralDataset(Dataset):
+    def __init__(self, data):
+        """
+        Args:
+            data (list of tuples): A list of (image, solution) tuples where
+                - image is a path to the image or a PIL Image
+                - solution is the text solution for the captcha
+        """
+        self.data = data
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
-        sample = self.data[idx]
+        image, solution = self.data[idx]
+
+        # If the image is a path, open it as a PIL image
+        if isinstance(image, str):
+            image = Image.open(image)
+
         return {
-            "image": sample["image"], # Should be a PIL image
+            "image": image,
             "qa": [
                 {
                     "question": "What does the text say?",
-                    "answer": sample["solution"],
+                    "answer": solution,
                 }
             ]
         }
 
+# Example usage:
+# Assuming 'data' is a list of tuples where each tuple is (image_path_or_PIL_image, solution)
+data = []
+for i in range(num_pages * num_images):
+    data.append((f"downloaded_images/image_{i + 1}.jpg", query))
+
+training_data = data[:int(0.8 * len(data))]
+validation_data = data[int(0.8 * len(data)):int(0.9 * len(data))]
+test_data = data[int(0.9 * len(data)):]
+
 datasets = {
-    "train": CaptchaDataset("train"),
-    "val": CaptchaDataset("validation"),
-    "test": CaptchaDataset("test"),
+    "train": GeneralDataset(training_data),
+    "val": GeneralDataset(validation_data),
+    "test": GeneralDataset(test_data),
 }
 
-# Initialize moondream. Change DEVICE to 'mps' if you're on an M1 Mac, or 'cpu' if you don't have a
-# GPU. Note that fine-tuning on CPU will be very slow.s
+print(datasets)
 
+fine_tune(datasets)
 
-DEVICE = "cuda"
-DTYPE = torch.float32 if DEVICE == "cpu" else torch.float16 # CPU doesn't support float16
-MD_REVISION = "2024-03-13"
-
-# print if cuda is available
-print(torch.cuda.is_available())
-
-tokenizer = AutoTokenizer.from_pretrained("vikhyatk/moondream2", revision=MD_REVISION)
-moondream = AutoModelForCausalLM.from_pretrained(
-    "vikhyatk/moondream2", revision=MD_REVISION, trust_remote_code=True,
-    torch_dtype=DTYPE, device_map={"": DEVICE}
-)
-
-sample = datasets['train'][0]
-# save the image to a file
-sample['image'].save('captcha.png')
-
-
-for qa in sample['qa']:
-    print('Question:', qa['question'])
-    print('Ground Truth:', qa['answer'])
-    print('Moondream:', moondream.answer_question(
-        moondream.encode_image(sample['image']),
-        qa['question'],
-        tokenizer=tokenizer,
-    ))
-
-# Number of times to repeat the training dataset. Increasing this may cause the model to overfit or
-# lose generalization due to catastrophic forgetting. Decreasing it may cause the model to underfit.
-EPOCHS = 2
-
-# Number of samples to process in each batch. Set this to the highest value that doesn't cause an
-# out-of-memory error. Decrease it if you're running out of memory. Batch size 8 currently uses around
-# 15 GB of GPU memory during fine-tuning.
-BATCH_SIZE = 4
-
-# Number of batches to process before updating the model. You can use this to simulate a higher batch
-# size than your GPU can handle. Set this to 1 to disable gradient accumulation.
-GRAD_ACCUM_STEPS = 2
-
-# Learning rate for the Adam optimizer. Needs to be tuned on a case-by-case basis. As a general rule
-# of thumb, increase it by 1.4 times each time you double the effective batch size.
-#
-# Source: https://www.cs.princeton.edu/~smalladi/blog/2024/01/22/SDEs-ScalingRules/
-#
-# Note that we linearly warm the learning rate up from 0.1 * LR to LR over the first 10% of the
-# training run, and then decay it back to 0.1 * LR over the last 90% of the training run using a
-# cosine schedule.
-LR = 3e-5
-
-# Whether to use Weights and Biases for logging training metrics.
-USE_WANDB = False
-
-
-# The current version of moondream uses "<END>" to denote the end of a response. In the future this
-# will be replaced with a special token.
-ANSWER_EOS = "<END>"
-
-# Number of tokens used to represent each image.
-IMG_TOKENS = 729
-
-def collate_fn(batch):
-    images = [sample['image'] for sample in batch]
-    images = torch.stack(moondream.vision_encoder.preprocess(images))
-    images = rearrange(images,
-                       "b c (h p1) (w p2) -> b (h w) (c p1 p2)",
-                       p1=14, p2=14)
-
-    labels_acc = []
-    tokens_acc = []
-
-    for sample in batch:
-        toks = [tokenizer.bos_token_id]
-        labs = [-100] * (IMG_TOKENS + 1)
-
-        for qa in sample['qa']:
-            q_t = tokenizer(
-                f"\n\nQuestion: {qa['question']}\n\nAnswer:",
-                add_special_tokens=False
-            ).input_ids
-            toks.extend(q_t)
-            labs.extend([-100] * len(q_t))
-
-            a_t = tokenizer(
-                f" {qa['answer']}{ANSWER_EOS}",
-                add_special_tokens=False
-            ).input_ids
-            toks.extend(a_t)
-            labs.extend(a_t)
-
-        tokens_acc.append(toks)
-        labels_acc.append(labs)
-
-    max_len = -1
-    for labels in labels_acc:
-        max_len = max(max_len, len(labels))
-
-    attn_mask_acc = []
-
-    for i in range(len(batch)):
-        len_i = len(labels_acc[i])
-        pad_i = max_len - len_i
-
-        labels_acc[i].extend([-100] * pad_i)
-        tokens_acc[i].extend([tokenizer.eos_token_id] * pad_i)
-        attn_mask_acc.append([1] * len_i + [0] * pad_i)
-
-    return (
-        images.to(dtype=DTYPE),
-        torch.stack([torch.tensor(t, dtype=torch.long) for t in tokens_acc]),
-        torch.stack([torch.tensor(l, dtype=torch.long) for l in labels_acc]),
-        torch.stack([torch.tensor(a, dtype=torch.bool) for a in attn_mask_acc]),
-    )
-
-def compute_loss(batch):
-    images, tokens, labels, attn_mask = batch
-
-    images = images.to(DEVICE)
-    tokens = tokens.to(DEVICE)
-    labels = labels.to(DEVICE)
-    attn_mask = attn_mask.to(DEVICE)
-
-    with torch.no_grad():
-        img_embs = moondream.vision_encoder.encoder(images)
-        img_embs = moondream.vision_encoder.projection(img_embs)
-
-    tok_embs = moondream.text_model.get_input_embeddings()(tokens)
-    inputs_embeds = torch.cat((tok_embs[:, 0:1, :], img_embs, tok_embs[:, 1:, :]), dim=1)
-
-    outputs = moondream.text_model(
-        inputs_embeds=inputs_embeds,
-        labels=labels,
-        attention_mask=attn_mask,
-    )
-
-    return outputs.loss
-
-def lr_schedule(step, max_steps):
-    x = step / max_steps
-    if x < 0.1:
-        return 0.1 * LR + 0.9 * LR * x / 0.1
-    else:
-        return 0.1 * LR + 0.9 * LR * (1 + math.cos(math.pi * (x - 0.1))) / 2
-
-dataloaders = {
-    "train": DataLoader(
-        datasets["train"],
-        batch_size=BATCH_SIZE,
-        shuffle=True,
-        collate_fn=collate_fn,
-    ),
-    "val": DataLoader(
-        datasets["val"],
-        batch_size=BATCH_SIZE,
-        collate_fn=collate_fn,
-    ),
-}
-
-moondream.text_model.train()
-moondream.text_model.transformer.gradient_checkpointing_enable()
-
-total_steps = EPOCHS * len(dataloaders["train"]) // GRAD_ACCUM_STEPS
-optimizer = Adam8bit(
-    [
-        {"params": moondream.text_model.parameters()},
-    ],
-    lr=LR * 0.1,
-    betas=(0.9, 0.95),
-    eps=1e-6
-)
-
-i = 0
-for epoch in range(EPOCHS):
-    for batch in tqdm(dataloaders["train"], desc=f"Epoch {epoch + 1}/{EPOCHS}"):
-        i += 1
-
-        loss = compute_loss(batch)
-        loss.backward()
-
-        if i % GRAD_ACCUM_STEPS == 0:
-            optimizer.step()
-            optimizer.zero_grad()
-
-            lr = lr_schedule(i / GRAD_ACCUM_STEPS, total_steps)
-            for param_group in optimizer.param_groups:
-                param_group['lr'] = lr
-
-        if i % 100 == 0 and USE_WANDB:
-            # Calculate validation loss
-            val_loss = 0
-            for val_batch in tqdm(dataloaders["val"], desc="Validation"):
-                with torch.no_grad():
-                    val_loss += compute_loss(val_batch).item()
-            val_loss /= len(dataloaders["val"])
-
-
-moondream.save_pretrained("checkpoints/moondream-ft")
+validate(datasets)
