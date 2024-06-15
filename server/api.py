@@ -5,6 +5,10 @@ import glob
 import shutil
 import api_helper as api_helper
 
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backend')))
+import main as model
+
 app = Flask(__name__)
 CORS(app)
 
@@ -22,7 +26,8 @@ def fintune():
     """
     # Get the JSON data from the request
     data = request.get_json()
-    
+    listed_labels = []
+
     # Check if 'labels' key exists in the JSON data
     if 'labels' in data and 'job_name' in data:
         labels = data['labels']
@@ -54,6 +59,7 @@ def fintune():
             path =  label['path'] if 'path' in label else None
             num_examples = label['num_examples'] if 'num_exmaples' in label else 20
             tagged_training_data_path = f'{directory_path}/{tag}'
+            listed_labels.append(tag)
 
             # Create the directory if it doesn't exist
             try:
@@ -67,6 +73,8 @@ def fintune():
             else:
                 api_helper.fetch_images_for_label(tag, tagged_training_data_path, num_examples)
 
+        #call fine tuning
+        model.finetune(directory_path, listed_labels)
 
         return jsonify({
             'status': 'success'

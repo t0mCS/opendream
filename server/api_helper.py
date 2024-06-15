@@ -28,11 +28,13 @@ def process_images_from_local_upload(path, tag_training_data, num_examples):
     for image_file in images_to_copy:
         shutil.copy(image_file, tag_training_data)
 
-def fetch_images_for_label(label, out_dir, num_images = 20):
+def fetch_images_for_label(label, out_dir, num_images = 1):
+    #infer num pages required assuming we have 20 images per page
+    num_pages = num_images % 20
+    num_images = num_images // num_pages
 
     # Send a GET request to the Google image search URL
     url = f"https://www.google.com/search?q={label}&tbm=isch"
-    num_pages = 5
 
     for page in range(num_pages):
         # Modify the URL to include the page number
@@ -47,6 +49,8 @@ def fetch_images_for_label(label, out_dir, num_images = 20):
 
         # Download the images from the current page
         for i, image_element in enumerate(image_elements[:num_images], start=1):
+            if i == 1:
+                continue
             # Get the image source URL
             image_url = image_element['src']
 
