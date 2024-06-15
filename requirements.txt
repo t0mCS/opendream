@@ -5,3 +5,4 @@ einops
 datasets
 bitsandbytes
 accelerate
+bs4

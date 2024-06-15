@@ -36,21 +36,11 @@ class CaptchaDataset(Dataset):
             ]
         }
 
-
-
 # Initialize moondream. Change DEVICE to 'mps' if you're on an M1 Mac, or 'cpu' if you don't have a
 # GPU. Note that fine-tuning on CPU will be very slow.s
 DEVICE = "cuda"
 DTYPE = torch.float32 if DEVICE == "cpu" else torch.float16 # CPU doesn't support float16
 MD_REVISION = "2024-03-13"
-
-datasets = {
-    "train": CaptchaDataset("train"),
-    "val": CaptchaDataset("validation"),
-    "test": CaptchaDataset("test"),
-}
-
-print(CaptchaDataset("train").data)
 
 tokenizer = AutoTokenizer.from_pretrained("vikhyatk/moondream2", revision=MD_REVISION)
 

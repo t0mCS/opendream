@@ -5,9 +5,8 @@ def validate(datasets):
     # Load the fine-tuned Moondream checkpoint
     moondream_ft = AutoModelForCausalLM.from_pretrained(
         "checkpoints/moondream-ft",
-        trust_remote_code=True,
-        torch_dtype=DTYPE,
-        device_map={"": DEVICE}
+        revision=MD_REVISION, trust_remote_code=True,
+        torch_dtype=DTYPE, device_map={"": DEVICE}
     )
 
 
