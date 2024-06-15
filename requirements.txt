@@ -6,3 +6,5 @@ datasets
 bitsandbytes
 accelerate
 bs4
+Flask
+flask_cors
