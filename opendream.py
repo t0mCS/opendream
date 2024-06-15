@@ -7,7 +7,7 @@ os.makedirs('downloaded_images', exist_ok=True)
 # Prompt the user for the search query
 query = input("Enter your search query: ")
 num_images = 20
-num_pages = 3  # Number of pages to scroll through
+num_pages = 5  # Number of pages to scroll through
 
 # Send a GET request to the Google image search URL
 url = f"https://www.google.com/search?q={query}&tbm=isch"
@@ -40,6 +40,8 @@ for page in range(num_pages):
         with open(f"downloaded_images/image_{page * num_images + i}.jpg", 'wb') as file:
             file.write(image_response.content)
 
+        print(f"Page {page + 1} images downloaded.")
+
 print("Images downloaded successfully.")
 
 # write a generalDataset class that given [image, solution] creates a dataset
@@ -67,7 +69,7 @@ class GeneralDataset(Dataset):
             "image": image,
             "qa": [
                 {
-                    "question": "What does the text say?",
+                    "question": "Describe the image",
                     "answer": solution,
                 }
             ]
@@ -88,7 +90,5 @@ datasets = {
     "val": GeneralDataset(validation_data),
     "test": GeneralDataset(test_data),
 }
-
-print(datasets)
 
 fine_tune(datasets)
