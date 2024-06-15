@@ -173,6 +173,9 @@ def fine_tune(datasets):
         for batch in tqdm(dataloaders["train"], desc=f"Epoch {epoch + 1}/{EPOCHS}"):
             i += 1
 
+            if i == 1:
+                tokenizer.save_pretrained("tokenizer/moondream-ft")
+            
             loss = compute_loss(batch)
             loss.backward()
 
@@ -194,5 +197,5 @@ def fine_tune(datasets):
 
 
     moondream.save_pretrained("checkpoints/moondream-ft")
-
+    
     validate(datasets, moondream)
