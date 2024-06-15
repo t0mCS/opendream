@@ -11,10 +11,13 @@ def inference(image):
 
     moondream.eval()
 
+    nu_tokenizer = AutoTokenizer.from_pretrained("checkpoints/moondream-ft", revision=MD_REVISION)
+
+
     md_answer = moondream.answer_question(
         moondream.encode_image(image),
         "Describe the image",
-        tokenizer=tokenizer,
+        tokenizer=nu_tokenizer,
     )
 
     print('Moondream:', md_answer)
