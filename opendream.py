@@ -37,12 +37,15 @@ datasets = {
 }
 
 # Initialize moondream. Change DEVICE to 'mps' if you're on an M1 Mac, or 'cpu' if you don't have a
-# GPU. Note that fine-tuning on CPU will be very slow.
+# GPU. Note that fine-tuning on CPU will be very slow.s
 
 
 DEVICE = "cuda"
 DTYPE = torch.float32 if DEVICE == "cpu" else torch.float16 # CPU doesn't support float16
 MD_REVISION = "2024-03-13"
+
+# print if cuda is available
+print(torch.cuda.is_available())
 
 tokenizer = AutoTokenizer.from_pretrained("vikhyatk/moondream2", revision=MD_REVISION)
 moondream = AutoModelForCausalLM.from_pretrained(
