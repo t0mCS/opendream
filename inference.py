@@ -17,7 +17,7 @@ def inference(image):
         tokenizer=tokenizer,
     )
 
-    return md_answer
+    print('Moondream:', md_answer)
 
 
 inference(Image.open("downloaded_images/image_60.jpg"))
