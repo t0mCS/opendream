@@ -2,11 +2,13 @@ from import_reqs import *
 
 def inference(image):
     # Load the fine-tuned Moondream checkpoint
+    print("loading model...")
     moondream = AutoModelForCausalLM.from_pretrained(
         "checkpoints/moondream-ft", revision=MD_REVISION, trust_remote_code=True,
         torch_dtype=DTYPE, device_map={"": DEVICE}
     )
 
+    print("model loaded!")
     # moondream.from_pretrained("checkpoints/moondream-ft")
 
     moondream.eval()
