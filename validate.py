@@ -1,13 +1,13 @@
 from import_reqs import *
 
 
-def validate(datasets):
+def validate(datasets, moondream_ft):
     # Load the fine-tuned Moondream checkpoint
-    moondream_ft = AutoModelForCausalLM.from_pretrained(
-        "checkpoints/moondream-ft",
-        revision=MD_REVISION, trust_remote_code=True,
-        torch_dtype=DTYPE, device_map={"": DEVICE}
-    )
+    # moondream_ft = AutoModelForCausalLM.from_pretrained(
+    #     "checkpoints/moondream-ft",
+    #     revision=MD_REVISION, trust_remote_code=True,
+    #     torch_dtype=DTYPE, device_map={"": DEVICE}
+    # )
 
 
     moondream_ft.eval()

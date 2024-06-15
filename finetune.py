@@ -1,4 +1,5 @@
 from import_reqs import *
+from validate import validate
 
 def fine_tune(datasets):
     # print if cuda is available
@@ -193,3 +194,5 @@ def fine_tune(datasets):
 
 
     moondream.save_pretrained("checkpoints/moondream-ft")
+
+    validate(datasets, moondream)

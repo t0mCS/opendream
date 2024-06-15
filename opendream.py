@@ -92,5 +92,3 @@ datasets = {
 print(datasets)
 
 fine_tune(datasets)
-
-validate(datasets)
