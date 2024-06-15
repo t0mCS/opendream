@@ -13,6 +13,9 @@ def inference(image):
 
     nu_tokenizer = AutoTokenizer.from_pretrained("tokenizer/moondream-ft", revision=MD_REVISION)
 
+    print(image)
+    print(image.encode_image)
+
 
     md_answer = moondream.answer_question(
         moondream.encode_image(image),
