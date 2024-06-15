@@ -13,6 +13,7 @@ import os
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
+from moondream import Moondream
 
 class CaptchaDataset(Dataset):
     def __init__(self, split='train'):

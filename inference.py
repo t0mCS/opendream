@@ -2,17 +2,12 @@ from import_reqs import *
 
 def inference(image):
     # Load the fine-tuned Moondream checkpoint
-    moondream_ft = AutoModelForCausalLM.from_pretrained(
-        "checkpoints/moondream-ft",
-        trust_remote_code=True,
-        torch_dtype=DTYPE,
-        device_map={"": DEVICE}
-    )
+    moondream = Moondream.from_pretrained("checkpoints/moondream-ft")
 
-    moondream_ft.eval()
+    moondream.eval()
 
-    md_answer = moondream_ft.answer_question(
-        moondream_ft.encode_image(image),
+    md_answer = moondream.answer_question(
+        moondream.encode_image(image),
         "What does the text say?",
         tokenizer=tokenizer,
     )
