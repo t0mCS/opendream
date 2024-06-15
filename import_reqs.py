@@ -13,6 +13,8 @@ import os
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
+import time
+import random
 
 class CaptchaDataset(Dataset):
     def __init__(self, split='train'):

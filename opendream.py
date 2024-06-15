@@ -43,6 +43,8 @@ for page in range(num_pages):
         print(f"Page {page + 1} images downloaded.")
 
 print("Images downloaded successfully.")
+# sleep a random time between 1 and 3 seconds to avoid getting blocked
+time.sleep(random.uniform(1, 3))
 
 # write a generalDataset class that given [image, solution] creates a dataset
 class GeneralDataset(Dataset):
