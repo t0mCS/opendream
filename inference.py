@@ -2,7 +2,12 @@ from import_reqs import *
 
 def inference(image):
     # Load the fine-tuned Moondream checkpoint
-    moondream = Moondream.from_pretrained("checkpoints/moondream-ft")
+    moondream = AutoModelForCausalLM.from_pretrained(
+        "vikhyatk/moondream2", revision=MD_REVISION, trust_remote_code=True,
+        torch_dtype=DTYPE, device_map={"": DEVICE}
+    )
+
+    moondream.from_pretrained("checkpoints/moondream-ft")
 
     moondream.eval()
 
