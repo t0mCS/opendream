@@ -20,4 +20,4 @@ def inference(image):
     return md_answer
 
 
-inference(Image.open("image_60.jpg"))
+inference(Image.open("downloaded_images/image_60.jpg"))
