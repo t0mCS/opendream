@@ -1,5 +1,12 @@
 from torch.utils.data import Dataset
 from datasets import load_dataset
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from torch.utils.data import DataLoader
+from bitsandbytes.optim import Adam8bit
+import math
+from einops import rearrange
+from tqdm import tqdm
 
 class CaptchaDataset(Dataset):
     def __init__(self, split='train'):
@@ -32,8 +39,6 @@ datasets = {
 # Initialize moondream. Change DEVICE to 'mps' if you're on an M1 Mac, or 'cpu' if you don't have a
 # GPU. Note that fine-tuning on CPU will be very slow.
 
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
 
 DEVICE = "cuda"
 DTYPE = torch.float32 if DEVICE == "cpu" else torch.float16 # CPU doesn't support float16
@@ -45,10 +50,10 @@ moondream = AutoModelForCausalLM.from_pretrained(
     torch_dtype=DTYPE, device_map={"": DEVICE}
 )
 
-from IPython.display import display
-
 sample = datasets['train'][0]
-display(sample['image'])
+# save the image to a file
+sample['image'].save('captcha.png')
+
 
 for qa in sample['qa']:
     print('Question:', qa['question'])
@@ -85,11 +90,6 @@ LR = 3e-5
 # Whether to use Weights and Biases for logging training metrics.
 USE_WANDB = False
 
-from torch.utils.data import DataLoader
-from bitsandbytes.optim import Adam8bit
-import math
-from einops import rearrange
-from tqdm import tqdm
 
 # The current version of moondream uses "<END>" to denote the end of a response. In the future this
 # will be replaced with a special token.
